@@ -1,3 +1,4 @@
+import time
 from socket import *
 import json
 import threading
@@ -10,12 +11,12 @@ def main():
             self.type = type
             self.value = value
 
-    # Peer class contains two sockets: receive and send
+    # Node class contains two sockets: receive and send
     # The first one listens for messages and the second one sends them
-    # If the Peer is the initializer of the conversation then it binds the sockets with to ports
-    # otherwise the peer just connects to the sockets
-    # Every peer is on a separate thread waiting for a message to reply
-    class Peer(threading.Thread):
+    # If the Node is the initializer of the conversation then it binds the sockets with to ports
+    # otherwise the node just connects to the sockets
+    # Every node is on a separate thread waiting for a message to reply
+    class Node(threading.Thread):
 
         def __init__(self, receive_ip, receive_port, send_ip, send_port):
             threading.Thread.__init__(self)
@@ -40,6 +41,7 @@ def main():
             self.send_socket.listen(1)
 
         def run(self):
+            print("listening... ")
             if not self.connected:
                 self.accept_connection()
             while self.connected:
@@ -54,6 +56,7 @@ def main():
             self.connected = True
 
         def send_message(self, type, value):
+            print("sending message: ", value, " at ", time.strftime("%I:%M:%S %p", time.localtime()))
             message = Message(type, value)
             byte_array = json.dumps(message.__dict__).encode("utf-8")
             self.send_socket.send(byte_array)
@@ -65,10 +68,16 @@ def main():
         # This method takes a byte array, converts it to json and the message
         # and gives appropriate answer to that message
         def resolve_message(self, data):
+            time.sleep(1)
             if data == b'':
                 return False
+            print("================================")
+            print("receiving message at ", time.strftime("%I:%M:%S %p", time.localtime()))
+
             message = Message(**json.loads(data))
-            print(message.type, " ", message.value)
+
+            print("payload: ", message.type, " ", message.value)
+            print("================================")
             if message.type == "start" and message.value == "hello":
                 self.send_message("start", "hi")
                 return True
@@ -82,19 +91,21 @@ def main():
                 self.send_socket.close()
                 return False
 
-    # getting input form terminal
+    # getting input form
     sr, ip1, port1, ip2, port2 = input().split()
 
     if sr == "r":
-        peer = Peer(ip1, int(port1), ip2, int(port2))
-        peer.bind()
-        peer.start()
+        node = Node(ip1, int(port1), ip2, int(port2))
+        node.bind()
+        print("process starting as receiver...")
+        node.start()
 
     elif sr == "s":
-        peer = Peer(ip1, int(port1), ip2, int(port2))
-        peer.connect()
-        peer.start()
-        peer.send_message("start", "hello")
+        node = Node(ip1, int(port1), ip2, int(port2))
+        node.connect()
+        print("process starting as sender...")
+        node.start()
+        node.send_message("start", "hello")
 
     else:
         print("Invalid type identifier")
@@ -102,3 +113,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# First start the receiver than the sender
+# to start a process as a receiver : r 127.0.0.1 54329 127.0.0.1 54328
+# to start a process as a sender : s 127.0.0.1 54328 127.0.0.1 54329
