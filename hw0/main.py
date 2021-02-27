@@ -1,3 +1,5 @@
+# Written by Farzin Nasiri
+# Distributed Systems 2021
 import time
 from socket import *
 import json
