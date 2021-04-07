@@ -107,7 +107,7 @@ class Node(threading.Thread):
     def run(self):
         log("process ", self.pid, " starting...")
 
-        if not self.is_active:
+        if not self.is_active: # first round probing
 
             self.receive_socket.bind((self.receive_ip, self.receive_port))
             self.is_active = True
