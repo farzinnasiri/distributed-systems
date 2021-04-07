@@ -1,7 +1,7 @@
 # Hirschberg–Sinclair algorithm(HS) 
 
-This an implementation of the [HS](https://en.wikipedia.org/wiki/Hirschberg%E2%80%93Sinclair_algorithm)  algorihtm 
-in an asynchronous ring network of processes with `uniqure non-zero integer ids` 
+This an implementation of the [HS](https://en.wikipedia.org/wiki/Hirschberg%E2%80%93Sinclair_algorithm) _leader election_ algorihtm 
+in an asynchronous ring network of processes with `uniqure non-zero integer ids` to find a leader.
 
 ## Run
 The code is written with **Python v3.8** but any other `v3.*` of python would run the program.
