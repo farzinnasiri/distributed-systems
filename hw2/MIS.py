@@ -61,7 +61,6 @@ class Node(threading.Thread):
         self.current_value = 0
 
         self.stage = 0
-        self.round = 0
         self.count_neighbours_messages = 0
 
         self.stage_timer = stage_timer
@@ -80,10 +79,15 @@ class Node(threading.Thread):
         self.neighbours.append(node)
 
     def remove_neighbour(self, id_: int):
+        # log(self.id, "removing", id_)
+        # log(self.id, len(self.neighbours))
         for i, neighbour in enumerate(self.neighbours):
+            # log(self.id, neighbour.id)
             if neighbour.id == id_:
+                # log(self.id, "found it")
                 self.neighbours.pop(i)
                 break
+        # log(self.id, len(self.neighbours))
 
     def broadcast_to_neighbours(self, message: Message):
         log(self.id, "broadcasting message of type", message.type_,
@@ -91,8 +95,32 @@ class Node(threading.Thread):
 
         for neighbour in self.neighbours:
             threading.Thread(
-                target=self.send(channel=neighbour.send_channel,
-                                 receiver=neighbour, message=message)).start()
+                target=self.send, args=(neighbour.send_channel,
+                                        neighbour, message)).start()
+
+    def find_winner(self):
+        while self.is_active:
+            if len(self.neighbours) == 0:
+                self.is_active = False
+                self.status = WINNER
+                log(self.id, "WINNER")
+
+                self.end_process()
+                break
+
+            self.count_neighbours_messages = 0
+            self.current_value = self.get_random_value()
+            self.stage += 1
+
+            log(self.id, "starting stage", self.stage,
+                "with value", self.current_value)
+
+            self.broadcast_to_neighbours(message=
+                                         Message(src_pid=self.id,
+                                                 type_=COMPARISON,
+                                                 value=self.current_value))
+
+            time.sleep(self.stage_timer)
 
     def send(self, channel: socket, receiver: NeighbourNode, message: Message):
         log(self.id, "sending a message of type", message.type_,
@@ -108,17 +136,8 @@ class Node(threading.Thread):
         if not self.is_active:
             self.receive_socket.bind((self.receive_ip, self.receive_port))
             self.is_active = True
-            # todo maybe packet loss?
 
-            self.current_value = self.get_random_value()
-            self.stage += 1
-
-            log(self.id, "starting stage", self.stage,
-                "with value", self.current_value)
-
-            self.broadcast_to_neighbours(message=Message(src_pid=self.id,
-                                                         type_=COMPARISON,
-                                                         value=self.current_value))
+            threading.Thread(target=self.find_winner).start()
 
         while self.is_active:
             # listening for incoming tokens
@@ -133,9 +152,9 @@ class Node(threading.Thread):
 
         message = Message(**json.loads(data))
         log(self.id,
-            "a message of type", message.type_,
+            "receiving a message of type", message.type_,
             "with value of", message.value,
-            "received from", message.src_pid)
+            "from", message.src_pid)
 
         if message.type_ == ANNOUNCEMENT:
             if message.value == WINNER:
@@ -165,7 +184,7 @@ class Node(threading.Thread):
 
     def end_process(self):
         log(self.id, "stopping...")
-        time.sleep(5)
+        time.sleep(1)
         self.receive_socket.close()
 
 
@@ -177,7 +196,9 @@ def check_exists(nodes: list, id_: int):
 
 
 def main():
-    timer = int(input())
+    file = open("./input.txt", "r")
+
+    timer = int(file.readline())
 
     nodes = []
 
@@ -185,9 +206,11 @@ def main():
 
     n = 0
     while True:
-        inputs = input()
+        inputs = file.readline()
 
-        if not inputs:
+        # print(inputs)
+
+        if inputs == "\n":
             break
 
         id1, id2, delay = inputs.split()
@@ -195,23 +218,23 @@ def main():
         exists, node = check_exists(nodes, int(id1))
 
         if exists:
-            node.add_neighbour(NeighbourNode(id2, "localhost", port + int(id2), int(delay)))
+            node.add_neighbour(NeighbourNode(int(id2), "localhost", port + int(id2), int(delay)))
 
         else:
             n += 1
             node = Node(int(id1), "localhost", port + int(id1), int(timer))
-            node.add_neighbour(NeighbourNode(id2, "localhost", port + int(id2), int(delay)))
+            node.add_neighbour(NeighbourNode(int(id2), "localhost", port + int(id2), int(delay)))
             nodes.append(node)
 
         exists, node = check_exists(nodes, int(id2))
 
         if exists:
-            node.add_neighbour(NeighbourNode(id1, "localhost", port + int(id1), int(delay)))
+            node.add_neighbour(NeighbourNode(int(id1), "localhost", port + int(id1), int(delay)))
 
         else:
             n += 1
             node = Node(int(id2), "localhost", port + int(id2), int(timer))
-            node.add_neighbour(NeighbourNode(id1, "localhost", port + int(id1), int(delay)))
+            node.add_neighbour(NeighbourNode(int(id1), "localhost", port + int(id1), int(delay)))
             nodes.append(node)
 
     # print(n)
