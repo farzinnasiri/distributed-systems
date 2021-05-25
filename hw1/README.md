@@ -8,7 +8,7 @@ The code is written with **Python v3.8** but any other `v3.*` of python would ru
 You can run the program in any **IDE** or **Terminal**:
 
 ```shell
->> python3 ./HS.py
+>> python3 ./hs.py
 ```
 
 ## Input
