@@ -38,14 +38,14 @@ def main():
     print("Starting...")
     start = time.time()
 
+    # Pre-computation
+
     links = sc.textFile(file_path) \
         .map(lambda link: link.split(" ")) \
         .filter(lambda link: link[0] != link[1]) \
         .map(lambda link: (int(link[0]), (int(link[1]), float(link[2])))) \
         .repartition(partitions) \
         .cache()
-
-    # Pre-computation
 
     links_by_node_id = links.groupByKey().cache()
 
@@ -57,8 +57,10 @@ def main():
 
     h = links_by_node_id.flatMap(lambda xs: [((xs[0], x[0]), x[1] / s(list(xs[1]))) for x in xs[1]]).cache()
 
+    # Gets an element of A when called
     getA = lambda x: 0 if outgoing_edges_by_node_id[x] > 0 else 1 / (count_nodes - 1)
 
+    # a temp RDD to loop on 1..n
     r = sc.parallelize(range(1, count_nodes + 1)).repartition(partitions).cache()
 
     pi1 = []
@@ -85,7 +87,7 @@ def main():
         # Calculate pi * (jump probability) vector
         jump_probability = sum(pi1) * alpha / count_nodes
 
-        # Finding pi *(S = (H+A)*(1-alpha))
+        # Finding pi *(S = (H+A)*(1-alpha)) + pi*(jump probability) vector
         pi = h_pi_sum.union(pi).reduceByKey(lambda x, y: x + y).cache()
 
         # Finding pi* G
